@@ -164,6 +164,11 @@ async function convertFile() {
     const dl = document.getElementById('btnDownload');
     dl.href = url; dl.download = json.filename;
 
+    // Configura controles en barra de notificaciones del móvil
+    const songTitle = selectedFile.name.replace('.gabc','').replace(/_/g,' ');
+    setupMediaSession(songTitle);
+    activateMediaSessionBridge();
+
     clearStatus();
     document.getElementById('player-section').style.display = 'block';
     document.getElementById('player-section').scrollIntoView({ behavior: 'smooth' });
@@ -181,6 +186,95 @@ function showStatus(msg, cls) {
 function clearStatus() {
   const s = document.getElementById('status');
   s.textContent = ''; s.className = ''; s.style.display = 'none';
+}
+
+// ── Media Session API ──────────────────────────────────────────────────────
+// Muestra controles en la barra de notificaciones y pantalla de bloqueo del móvil
+
+let currentTitle = 'Cantus Organicus';
+
+function setupMediaSession(title) {
+  if (!('mediaSession' in navigator)) return;
+
+  currentTitle = title || 'Cantus Organicus';
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: currentTitle,
+    artist: 'Canto Gregoriano',
+    album: 'Cantus Organicus',
+    artwork: [
+      { src: 'https://raw.githubusercontent.com/cifkao/html-midi-player/master/docs/favicon.png', sizes: '96x96', type: 'image/png' }
+    ]
+  });
+
+  const player = document.getElementById('midiPlayer');
+
+  navigator.mediaSession.setActionHandler('play', () => {
+    player.start?.() || player.shadowRoot?.querySelector('[title*="lay"]')?.click();
+    navigator.mediaSession.playbackState = 'playing';
+  });
+
+  navigator.mediaSession.setActionHandler('pause', () => {
+    player.stop?.() || player.shadowRoot?.querySelector('[title*="ause"], [title*="top"]')?.click();
+    navigator.mediaSession.playbackState = 'paused';
+  });
+
+  navigator.mediaSession.setActionHandler('stop', () => {
+    player.stop?.();
+    navigator.mediaSession.playbackState = 'paused';
+  });
+
+  // Escucha eventos del midi-player para sincronizar el estado
+  player.addEventListener('start', () => {
+    navigator.mediaSession.playbackState = 'playing';
+  });
+
+  player.addEventListener('stop', () => {
+    navigator.mediaSession.playbackState = 'paused';
+  });
+}
+
+// Silentio audio "truco": la Media Session API requiere que haya
+// un elemento <audio> activo para mostrar los controles en iOS/Android.
+// Creamos uno silencioso que se activa junto con el midi-player.
+function activateMediaSessionBridge() {
+  if (!('mediaSession' in navigator)) return;
+
+  let bridge = document.getElementById('_mediaBridge');
+  if (!bridge) {
+    // Audio silencioso de 1h en base64 (sine wave a volumen 0)
+    bridge = document.createElement('audio');
+    bridge.id = '_mediaBridge';
+    bridge.loop = true;
+    bridge.volume = 0.001; // casi inaudible, suficiente para activar la sesión
+    // Generamos el buffer de silencio con AudioContext
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const dest = ctx.createMediaStreamDestination();
+      src.connect(dest);
+      src.start();
+      bridge.srcObject = dest.stream;
+    } catch(e) {
+      // Fallback: data URI de silencio mínimo
+      bridge.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    }
+    document.body.appendChild(bridge);
+  }
+
+  const player = document.getElementById('midiPlayer');
+
+  player.addEventListener('start', () => {
+    bridge.play().catch(()=>{});
+    navigator.mediaSession.playbackState = 'playing';
+  }, { once: false });
+
+  player.addEventListener('stop', () => {
+    bridge.pause();
+    navigator.mediaSession.playbackState = 'paused';
+  }, { once: false });
 }
 </script>
 </body>
