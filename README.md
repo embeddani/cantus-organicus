@@ -1,6 +1,6 @@
 # Cantus Organicus — GABC → Órgano
 
-Aplicación web que convierte archivos GABC (canto gregoriano) a MIDI y los reproduce como órgano de tubos en el navegador.
+Aplicación web que convierte archivos GABC (canto gregoriano) a MIDI y los reproduce como órgano de tubos en el navegador. Simplemente es unir las contribuciones open source de jperon y cifkao con tal de ofrecer una interfaz que soprendentemente aún no existía: un reproductor online de archivos GABC. Más adelante pienso implementar una aplicación que integre lo que aquí se ha realizado con tal de ofrecer el breviario gregoriano con la posibilidad de seguir nota a nota cada canto, y así hacerlo más accesible para aquellos que no dominan el canto gregoriano y tengan dificultad para leer la notación cuadrada. Gloria a Dios.
 
 ## Requisitos
 
